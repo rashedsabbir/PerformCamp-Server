@@ -8,10 +8,16 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 app.use(cors());
 app.use(express.json())
 
+//DB_USER=PerformCamp
+//DB_PASS=7u9KgFy8hLSAoG9E
+
+const uri = "mongodb+srv://PerformCamp:7u9KgFy8hLSAoG9E@cluster0.0e6jqyu.mongodb.net/?retryWrites=true&w=majority";
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
 async function run() {
     try {
-
-
+        await client.connect()
+        console.log('database connected')
         
 
     }
