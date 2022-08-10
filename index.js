@@ -10,6 +10,7 @@ app.use(express.json())
 
 //DB_USER=PerformCamp
 //DB_PASS=7u9KgFy8hLSAoG9E
+//live link = https://perform-camp-server.vercel.app
 
 const uri = "mongodb+srv://PerformCamp:7u9KgFy8hLSAoG9E@cluster0.0e6jqyu.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
