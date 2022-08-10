@@ -6,12 +6,16 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
+//middleware
 app.use(cors());
 app.use(express.json())
 
 
+//live link = https://perform-camp-server.vercel.app
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0e6jqyu.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
 
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
