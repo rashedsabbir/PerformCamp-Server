@@ -39,6 +39,7 @@ async function run() {
 
     const customerReviews = database.collection("customerReviews");
     const userCollection = database.collection('users');
+    const taskCollection = database.collection('tasks');
 
 
     //get all reviews from database
@@ -70,6 +71,12 @@ async function run() {
       res.send({ result, token });
 
   })
+//post task
+  app.post('/task', async (req, res) => {
+    const task = req.body;
+    const result = await taskCollection.insertOne(task);
+    res.send(result);
+})
 
   }
   finally {
