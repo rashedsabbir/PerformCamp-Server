@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json())
 
 
-//live link = https://perform-camp-server.vercel.app
+//live link = https://intense-citadel-07221.herokuapp.com
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0e6jqyu.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
