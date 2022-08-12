@@ -4,6 +4,7 @@ const port = process.env.PORT || 5000;
 const cors = require("cors");
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const ObjectId = require('mongodb').ObjectId;
 const jwt = require('jsonwebtoken');
 
 //middleware
@@ -18,19 +19,19 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 function verifyJWT(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).send({ message: 'UnAuthorized Access' });
-    }
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: 'UnAuthorized Access' });
+  }
 
-    const token = authHeader.split(' ')[1];
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-        if (err) {
-            return res.status(403).send({ message: 'Forbidden Access' });
-        }
-        req.decoded = decoded;
-        next();
-    });
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
+    req.decoded = decoded;
+    next();
+  });
 
 }
 
@@ -58,6 +59,12 @@ async function run() {
       res.json(result)
     })
 
+    //get all Users
+    app.get("/user", async (req, res) => {
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
+
     //Users
     app.put('/user/:email', async (req, res) => {
       const user = req.body;
@@ -65,21 +72,61 @@ async function run() {
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
-          $set: user,
+        $set: user,
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, {
-          expiresIn: '1h'
+        expiresIn: '1h'
       })
       res.send({ result, token });
 
+    })
+    //Get Admin
+    app.get('/admin/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === 'Admin';
+      res.send({ admin: isAdmin });
   })
-//post task
-  app.post('/task', async (req, res) => {
-    const task = req.body;
-    const result = await taskCollection.insertOne(task);
-    res.send(result);
-})
+    //Set role
+    app.put('/user_admin/:email',  async (req, res) => {
+      const email = req.params.email;
+      const role = req.body;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: role,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+
+    })
+    //get tasks
+    app.get("/task", async (req, res) => {
+      const q = req.query;
+      const cursor = taskCollection.find(q);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //post task
+    app.post('/task', async (req, res) => {
+      const task = req.body;
+      const result = await taskCollection.insertOne(task);
+      res.send(result);
+    })
+
+      //Update task
+      app.put('/task/:id',  async (req, res) => {
+        const id = req.params.id;
+        const updatedTask = req.body;
+        const filter = { _id: ObjectId(id) };
+        const updateDoc = {
+          $set: updatedTask,
+        };
+        const result = await taskCollection.updateOne(filter, updateDoc);
+        res.send(result);
+  
+      })
 
   }
   finally {
