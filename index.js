@@ -3,8 +3,10 @@ const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId,  } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const { query } = require('express');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 //middleware
 app.use(cors());
@@ -18,19 +20,19 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 function verifyJWT(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).send({ message: 'UnAuthorized Access' });
-    }
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: 'UnAuthorized Access' });
+  }
 
-    const token = authHeader.split(' ')[1];
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-        if (err) {
-            return res.status(403).send({ message: 'Forbidden Access' });
-        }
-        req.decoded = decoded;
-        next();
-    });
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
+    req.decoded = decoded;
+    next();
+  });
 
 }
 
@@ -42,6 +44,8 @@ async function run() {
 
     const customerReviews = database.collection("customerReviews");
     const userCollection = database.collection('users');
+    const bookingsCollection = database.collection("bookings");
+    const paymentsCollection = database.collection('payments');
 
 
     //get all reviews from database
@@ -64,15 +68,72 @@ async function run() {
       const filter = { email: email };
       const options = { upsert: true };
       const updateDoc = {
-          $set: user,
+        $set: user,
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, {
-          expiresIn: '1h'
+        expiresIn: '1h'
       })
       res.send({ result, token });
 
+    })
+
+    // Services
+    app.post('/bookings', (req, res) => {
+      console.log(req.body)
+      const bookings = req.body;
+      const result = bookingsCollection.insertOne(bookings)
+      res.send(result);
+    })
+
+    app.get("/bookings", async(req,res)=>{
+      const bookings = await bookingsCollection.find().toArray();
+      res.send(bookings);
   })
+
+  app.get('/bookings/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: ObjectId(id) };
+    const booking = await bookingsCollection.findOne(query);
+    res.send(booking)
+})
+
+app.delete('/bookings/:id', async (req, res) => {
+    const id = req.params.id;
+    console.log(id)
+    const filter = { _id: ObjectId(id) };
+    const result = await bookingsCollection.deleteOne(filter);
+    res.send(result);
+})
+
+//Payment
+app.post("/create-payment-intent", async (req, res) => {
+  const service = req.body;
+  const price = service.price;           
+  const amount = price * 100;
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: "usd",
+    payment_method_types: ["card"],
+  })
+  res.send({ clientSecret: paymentIntent.client_secret })
+})
+
+
+app.patch('/bookings/:id', async (req, res) => {
+  const id = req.params.id;
+  const payment = req.body;
+  const filter = { _id: ObjectId(id) };
+  const updateDoc = {
+    $set: {
+      paid: true,
+      transaction: payment.transaction
+    }
+  }
+  const result = await paymentsCollection.insertOne(payment);
+  const updateOrder = await bookingsCollection.updateOne(filter, updateDoc);
+  res.send(updateDoc);
+})
 
   }
   finally {
