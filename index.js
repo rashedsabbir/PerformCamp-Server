@@ -3,7 +3,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 require('dotenv').config();
-const { MongoClient, ServerApiVersion, ObjectId,  } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const { query } = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -46,6 +46,7 @@ async function run() {
     const userCollection = database.collection('users');
     const bookingsCollection = database.collection("bookings");
     const paymentsCollection = database.collection('payments');
+    const taskCollection = database.collection('tasks');
 
 
     //get all reviews from database
@@ -59,6 +60,12 @@ async function run() {
       const item = req.body
       const result = await customerReviews.insertOne(item)
       res.json(result)
+    })
+
+    //get all Users
+    app.get("/user", async (req, res) => {
+      const result = await userCollection.find().toArray()
+      res.send(result)
     })
 
     //Users
@@ -86,71 +93,116 @@ async function run() {
       res.send(result);
     })
 
-    app.get("/bookings", async(req,res)=>{
+    app.get("/bookings", async (req, res) => {
       const bookings = await bookingsCollection.find().toArray();
       res.send(bookings);
-  })
+    })
+      //Get Admin
+      app.get('/admin/:email', verifyJWT, async (req, res) => {
+        const email = req.params.email;
+        const user = await userCollection.findOne({ email: email });
+        const isAdmin = user.role === 'Admin';
+        res.send({ admin: isAdmin });
+      })
+      //Set role
+      app.put('/user_admin/:email', async (req, res) => {
+        const email = req.params.email;
+        const role = req.body;
+        const filter = { email: email };
+        const updateDoc = {
+          $set: role,
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
 
-  app.get('/bookings/:id', async (req, res) => {
-    const id = req.params.id;
-    const query = { _id: ObjectId(id) };
-    const booking = await bookingsCollection.findOne(query);
-    res.send(booking)
-})
+      })
+      //get tasks
+      app.get("/task", async (req, res) => {
+        const q = req.query;
+        const cursor = taskCollection.find(q);
+        const result = await cursor.toArray();
+        res.send(result);
+      });
 
-app.delete('/bookings/:id', async (req, res) => {
-    const id = req.params.id;
-    console.log(id)
-    const filter = { _id: ObjectId(id) };
-    const result = await bookingsCollection.deleteOne(filter);
-    res.send(result);
-})
+      //post task
+      app.post('/task', async (req, res) => {
+        const task = req.body;
+        const result = await taskCollection.insertOne(task);
+        res.send(result);
+      })
 
-//Payment
-app.post("/create-payment-intent", async (req, res) => {
-  const service = req.body;
-  const price = service.price;           
-  const amount = price * 100;
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amount,
-    currency: "usd",
-    payment_method_types: ["card"],
-  })
-  res.send({ clientSecret: paymentIntent.client_secret })
-})
+      //Update task
+      app.put('/task/:id', async (req, res) => {
+        const id = req.params.id;
+        const updatedTask = req.body;
+        const filter = { _id: ObjectId(id) };
+        const updateDoc = {
+          $set: updatedTask,
+        };
+        const result = await taskCollection.updateOne(filter, updateDoc);
+        res.send(result);
+
+      })
+
+      app.get('/bookings/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const booking = await bookingsCollection.findOne(query);
+        res.send(booking)
+      })
+
+      app.delete('/bookings/:id', async (req, res) => {
+        const id = req.params.id;
+        console.log(id)
+        const filter = { _id: ObjectId(id) };
+        const result = await bookingsCollection.deleteOne(filter);
+        res.send(result);
+      })
+
+      //Payment
+      app.post("/create-payment-intent", async (req, res) => {
+        const service = req.body;
+        const price = service.price;
+        const amount = price * 100;
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        })
+        res.send({ clientSecret: paymentIntent.client_secret })
+      })
 
 
-app.patch('/bookings/:id', async (req, res) => {
-  const id = req.params.id;
-  const payment = req.body;
-  const filter = { _id: ObjectId(id) };
-  const updateDoc = {
-    $set: {
-      paid: true,
-      transaction: payment.transaction
+      app.patch('/bookings/:id', async (req, res) => {
+        const id = req.params.id;
+        const payment = req.body;
+        const filter = { _id: ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            paid: true,
+            transaction: payment.transaction
+          }
+        }
+        const result = await paymentsCollection.insertOne(payment);
+        const updateOrder = await bookingsCollection.updateOne(filter, updateDoc);
+        res.send(updateDoc);
+      })
+
     }
-  }
-  const result = await paymentsCollection.insertOne(payment);
-  const updateOrder = await bookingsCollection.updateOne(filter, updateDoc);
-  res.send(updateDoc);
-})
+    finally {}
 
   }
-  finally {
 
-  }
-}
-
-run().catch(console.dir)
+run().catch(console.dir);
 
 
-app.get('/', (req, res) => {
-  res.send('Welcome to PerformCamp Server!')
-})
-app.get('/check', (req, res) => {
-  res.send('Test route checking')
-})
+  app.get('/', (req, res) => {
+    res.send('Welcome to PerformCamp Server!')
+  })
+  app.get('/check', (req, res) => {
+    res.send('Test route checking')
+  })
 
-app.listen(port, () => {
-  console.log(`PerformCamp Server listening on port ${port}`)
-})
+  app.listen(port, () => {
+    console.log(`PerformCamp Server listening on port ${port}`)
+  })
