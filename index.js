@@ -13,10 +13,14 @@ app.use(cors());
 app.use(express.json())
 
 
-//live link = https://perform-camp-server.vercel.app
+//live link = https://intense-citadel-07221.herokuapp.com
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0e6jqyu.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+const client = new MongoClient(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverApi: ServerApiVersion.v1
+});
 
 
 function verifyJWT(req, res, next) {
@@ -55,6 +59,27 @@ async function run() {
       res.json(result)
     })
 
+
+    app.get("/task", async (req, res) => {
+      const q = req.query;
+      const cursor = taskCollection.find(q);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //Update task
+    app.put('/task/:id',  async (req, res) => {
+      const id = req.params.id;
+      const updatedTask = req.body;
+      const filter = { _id: ObjectId(id) };
+      const updateDoc = {
+        $set: updatedTask,
+      };
+      const result = await taskCollection.updateOne(filter, updateDoc);
+      res.send(result);
+
+    })
+
     //post reviews
     app.post("/customerReviews", async (req, res) => {
       const item = req.body
@@ -72,8 +97,12 @@ async function run() {
     app.put('/user/:email', async (req, res) => {
       const user = req.body;
       const email = req.params.email;
-      const filter = { email: email };
-      const options = { upsert: true };
+      const filter = {
+        email: email
+      };
+      const options = {
+        upsert: true
+      };
       const updateDoc = {
         $set: user,
       };
@@ -81,7 +110,10 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '1h'
       })
-      res.send({ result, token });
+      res.send({
+        result,
+        token
+      });
 
     })
 
