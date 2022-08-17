@@ -51,7 +51,19 @@ async function run() {
     const bookingsCollection = database.collection("bookings");
     const paymentsCollection = database.collection('payments');
     const taskCollection = database.collection('tasks');
+    const employeeCollection = database.collection('employee');
 
+
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await userCollection.findOne({ email: requester })
+      if (requesterAccount.role === 'admin') {
+        next();
+      }
+      else {
+        res.status(403).send({ message: 'Forbidden Access' })
+      }
+    }
 
     //get all reviews from database
     app.get("/customerReviews", async (req, res) => {
@@ -128,6 +140,13 @@ async function run() {
     app.get("/bookings", async (req, res) => {
       const bookings = await bookingsCollection.find().toArray();
       res.send(bookings);
+    })
+    //Get Admin
+    app.get('/admin/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === 'Admin';
+      res.send({ admin: isAdmin });
     })
     
 
@@ -235,6 +254,14 @@ async function run() {
       const result = await paymentsCollection.insertOne(payment);
       const updateOrder = await bookingsCollection.updateOne(filter, updateDoc);
       res.send(updateDoc);
+    })
+
+//Add Employee
+
+    app.post('/employee', async (req, res) => {
+      const doctor = req.body;
+      const result = await employeeCollection.insertOne(doctor);
+      res.send(result);
     })
 
   }
