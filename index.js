@@ -49,21 +49,11 @@ async function run() {
     const customerReviews = database.collection("customerReviews");
     const userCollection = database.collection('users');
     const bookingsCollection = database.collection("bookings");
-    const paymentsCollection = database.collection('payments');
+    const paymentsCollection = database.collection('payments');''
     const taskCollection = database.collection('tasks');
+    const pendingReviewCollection = database.collection('pendingReview');
     const employeeCollection = database.collection('employee');
 
-
-    const verifyAdmin = async (req, res, next) => {
-      const requester = req.decoded.email;
-      const requesterAccount = await userCollection.findOne({ email: requester })
-      if (requesterAccount.role === 'admin') {
-        next();
-      }
-      else {
-        res.status(403).send({ message: 'Forbidden Access' })
-      }
-    }
 
     //get all reviews from database
     app.get("/customerReviews", async (req, res) => {
@@ -141,13 +131,6 @@ async function run() {
       const bookings = await bookingsCollection.find().toArray();
       res.send(bookings);
     })
-    //Get Admin
-    app.get('/admin/:email', verifyJWT, async (req, res) => {
-      const email = req.params.email;
-      const user = await userCollection.findOne({ email: email });
-      const isAdmin = user.role === 'Admin';
-      res.send({ admin: isAdmin });
-    })
     
 
     //Set role
@@ -172,7 +155,7 @@ async function run() {
     app.get('/task/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       // console.log(email);
-      console.log(req.decoded);
+      // console.log(req.decoded);
       const decodedEmail = req.decoded.email;
       // console.log('decoded', decodedEmail)
       if (email === decodedEmail) {
@@ -211,6 +194,15 @@ async function run() {
       res.send(result);
 
     })
+
+    //delete task by id
+    app.delete('/task/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await taskCollection.deleteOne(filter);
+      res.send(result);
+
+  })
 
     app.get('/bookings/:id', async (req, res) => {
       const id = req.params.id;
@@ -256,13 +248,39 @@ async function run() {
       res.send(updateDoc);
     })
 
-//Add Employee
+    //get pending review task;
+    app.get('/pendingReview/:email', verifyJWT, async (req, res) => {
+      const appointee = req.params.email;
+      console.log("appointee", email);
+      const decodedEmail = req.decoded.email;
+      // console.log('decoded', decodedEmail)
+      if (appointee === decodedEmail) {
+        const query = { appointee: appointee };
+        const cursor = pendingReviewCollection.find(query);
+        const tasks = await cursor.toArray();
+        return res.send(tasks);
+      }
+
+      else {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+    })
+
+     //post pending review task
+     app.post('/pendingReview', async (req, res) => {
+      const task = req.body;
+      const result = await pendingReviewCollection.insertOne(task);
+      res.send(result);
+    })
+
+    //Add Employee
 
     app.post('/employee', async (req, res) => {
       const doctor = req.body;
       const result = await employeeCollection.insertOne(doctor);
       res.send(result);
     })
+
 
   }
   finally { }
