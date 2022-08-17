@@ -49,8 +49,9 @@ async function run() {
     const customerReviews = database.collection("customerReviews");
     const userCollection = database.collection('users');
     const bookingsCollection = database.collection("bookings");
-    const paymentsCollection = database.collection('payments');
+    const paymentsCollection = database.collection('payments');''
     const taskCollection = database.collection('tasks');
+    const pendingReviewCollection = database.collection('pendingReview');
 
 
     //get all reviews from database
@@ -153,7 +154,7 @@ async function run() {
     app.get('/task/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       // console.log(email);
-      console.log(req.decoded);
+      // console.log(req.decoded);
       const decodedEmail = req.decoded.email;
       // console.log('decoded', decodedEmail)
       if (email === decodedEmail) {
@@ -192,6 +193,15 @@ async function run() {
       res.send(result);
 
     })
+
+    //delete task by id
+    app.delete('/task/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await taskCollection.deleteOne(filter);
+      res.send(result);
+
+  })
 
     app.get('/bookings/:id', async (req, res) => {
       const id = req.params.id;
@@ -235,6 +245,31 @@ async function run() {
       const result = await paymentsCollection.insertOne(payment);
       const updateOrder = await bookingsCollection.updateOne(filter, updateDoc);
       res.send(updateDoc);
+    })
+
+    //get pending review task;
+    app.get('/pendingReview/:email', verifyJWT, async (req, res) => {
+      const appointee = req.params.email;
+      console.log("appointee", email);
+      const decodedEmail = req.decoded.email;
+      // console.log('decoded', decodedEmail)
+      if (appointee === decodedEmail) {
+        const query = { appointee: appointee };
+        const cursor = pendingReviewCollection.find(query);
+        const tasks = await cursor.toArray();
+        return res.send(tasks);
+      }
+
+      else {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+    })
+
+     //post pending review task
+     app.post('/pendingReview', async (req, res) => {
+      const task = req.body;
+      const result = await pendingReviewCollection.insertOne(task);
+      res.send(result);
     })
 
   }
