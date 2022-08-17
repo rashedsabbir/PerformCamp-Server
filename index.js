@@ -52,6 +52,7 @@ async function run() {
     const paymentsCollection = database.collection('payments');''
     const taskCollection = database.collection('tasks');
     const pendingReviewCollection = database.collection('pendingReview');
+    const employeeCollection = database.collection('employee');
 
 
     //get all reviews from database
@@ -271,6 +272,15 @@ async function run() {
       const result = await pendingReviewCollection.insertOne(task);
       res.send(result);
     })
+
+    //Add Employee
+
+    app.post('/employee', async (req, res) => {
+      const doctor = req.body;
+      const result = await employeeCollection.insertOne(doctor);
+      res.send(result);
+    })
+
 
   }
   finally { }
