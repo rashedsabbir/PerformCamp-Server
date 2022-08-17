@@ -148,25 +148,49 @@ async function run() {
       const isAdmin = user.role === 'Admin';
       res.send({ admin: isAdmin });
     })
+    
+
     //Set role
     app.put('/user_admin/:email', async (req, res) => {
       const email = req.params.email;
-      const role = req.body;
       const filter = { email: email };
       const updateDoc = {
-        $set: role,
+        $set: { role: 'Manager' },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
 
     })
     //get tasks
-    app.get("/task", async (req, res) => {
+    app.get("/task",  async (req, res) => {
       const q = req.query;
       const cursor = taskCollection.find(q);
       const result = await cursor.toArray();
       res.send(result);
     });
+    //Get task by assign email
+    app.get('/task/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      // console.log(email);
+      console.log(req.decoded);
+      const decodedEmail = req.decoded.email;
+      // console.log('decoded', decodedEmail)
+      if (email === decodedEmail) {
+        const query = { email: email };
+        const cursor = taskCollection.find(query);
+        const tasks = await cursor.toArray();
+        return res.send(tasks);
+      }
+
+      else {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+    })
+
+    app.get('/order', verifyJWT, async (req, res) => {
+      const orders = await orderCollection.find().toArray();
+      res.send(orders);
+    })
 
     //post task
     app.post('/task', async (req, res) => {
@@ -232,6 +256,7 @@ async function run() {
       res.send(updateDoc);
     })
 
+//Add Employee
 
     app.post('/employee', async (req, res) => {
       const doctor = req.body;
