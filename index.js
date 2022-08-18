@@ -259,8 +259,8 @@ async function run() {
 //Add Employee
 
     app.post('/employee', async (req, res) => {
-      const doctor = req.body;
-      const result = await employeeCollection.insertOne(doctor);
+      const employee = req.body;
+      const result = await employeeCollection.insertOne(employee);
       res.send(result);
     })
 
