@@ -49,11 +49,31 @@ async function run() {
     const customerReviews = database.collection("customerReviews");
     const userCollection = database.collection('users');
     const bookingsCollection = database.collection("bookings");
-    const paymentsCollection = database.collection('payments');''
+    const paymentsCollection = database.collection('payments'); ''
     const taskCollection = database.collection('tasks');
     const pendingReviewCollection = database.collection('pendingReview');
     const employeeCollection = database.collection('employee');
+    const employeeReviewCollection = database.collection('userReview');
+    const feedbackCollection = database.collection('feedbacks');
 
+    const verifyManager = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await userCollection.findOne({ email: requester });
+      if (requesterAccount.role === 'Manager') {
+        next();
+      }
+      else {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+    }
+
+    //get manager
+    app.get('/manager/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isManager = user.role === 'Manager';
+      res.send({ manager: isManager });
+    })
 
     //get all reviews from database
     app.get("/customerReviews", async (req, res) => {
@@ -61,7 +81,7 @@ async function run() {
       res.json(result)
     })
 
-
+    //get task
     app.get("/task", async (req, res) => {
       const q = req.query;
       const cursor = taskCollection.find(q);
@@ -110,7 +130,7 @@ async function run() {
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '1h'
+        expiresIn: '1d'
       })
       res.send({
         result,
@@ -131,7 +151,7 @@ async function run() {
       const bookings = await bookingsCollection.find().toArray();
       res.send(bookings);
     })
-    
+
 
     //Set role
     app.put('/user_admin/:email', async (req, res) => {
@@ -145,7 +165,7 @@ async function run() {
 
     })
     //get tasks
-    app.get("/task",  async (req, res) => {
+    app.get("/task", async (req, res) => {
       const q = req.query;
       const cursor = taskCollection.find(q);
       const result = await cursor.toArray();
@@ -154,10 +174,7 @@ async function run() {
     //Get task by assign email
     app.get('/task/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      // console.log(email);
-      // console.log(req.decoded);
       const decodedEmail = req.decoded.email;
-      // console.log('decoded', decodedEmail)
       if (email === decodedEmail) {
         const query = { email: email };
         const cursor = taskCollection.find(query);
@@ -170,6 +187,7 @@ async function run() {
       }
     })
 
+    //get order
     app.get('/order', verifyJWT, async (req, res) => {
       const orders = await orderCollection.find().toArray();
       res.send(orders);
@@ -202,8 +220,9 @@ async function run() {
       const result = await taskCollection.deleteOne(filter);
       res.send(result);
 
-  })
+    })
 
+    //get bookings by id
     app.get('/bookings/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -251,7 +270,7 @@ async function run() {
     //get pending review task;
     app.get('/pendingReview/:email', verifyJWT, async (req, res) => {
       const appointee = req.params.email;
-      console.log("appointee", email);
+      console.log("appointee", appointee);
       const decodedEmail = req.decoded.email;
       // console.log('decoded', decodedEmail)
       if (appointee === decodedEmail) {
@@ -266,21 +285,73 @@ async function run() {
       }
     })
 
-     //post pending review task
-     app.post('/pendingReview', async (req, res) => {
+    //post pending review task
+    app.post('/pendingReview', async (req, res) => {
       const task = req.body;
       const result = await pendingReviewCollection.insertOne(task);
       res.send(result);
     })
 
     //Add Employee
-
     app.post('/employee', async (req, res) => {
       const doctor = req.body;
       const result = await employeeCollection.insertOne(doctor);
       res.send(result);
     })
 
+    //get employee review
+    app.get('/employeeReview', verifyJWT, async (req, res) => {
+      const reviews = await employeeReviewCollection.find().toArray();
+      res.send(reviews);
+    })
+
+    //post task
+    app.post('/employeeReview', async (req, res) => {
+      const review = req.body;
+      const result = await employeeReviewCollection.insertOne(review);
+      res.send(result);
+    })
+
+    //delete pending review by id
+    app.delete('/pendingReview/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await pendingReviewCollection.deleteOne(filter);
+      res.send(result);
+
+    })
+
+    //get feedback
+    app.get('/feedback/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const decodedEmail = req.decoded.email;
+      if (email === decodedEmail) {
+        const query = { email: email };
+        const cursor = feedbackCollection.find(query);
+        const feedbacks = await cursor.toArray();
+        return res.send(feedbacks);
+      }
+
+      else {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+    })
+
+    //User feedback task
+    app.post('/feedback', async (req, res) => {
+      const feedback = req.body;
+      const result = await feedbackCollection.insertOne(feedback);
+      res.send(result);
+    })
+
+    //delete feedback task
+    app.delete('/feedback/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await feedbackCollection.deleteOne(filter);
+      res.send(result);
+
+    })
 
   }
   finally { }
