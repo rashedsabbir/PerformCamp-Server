@@ -270,7 +270,7 @@ async function run() {
     //get pending review task;
     app.get('/pendingReview/:email', verifyJWT, async (req, res) => {
       const appointee = req.params.email;
-      console.log("appointee", appointee);
+      // console.log("appointee");
       const decodedEmail = req.decoded.email;
       // console.log('decoded', decodedEmail)
       if (appointee === decodedEmail) {
@@ -292,10 +292,39 @@ async function run() {
       res.send(result);
     })
 
+    //delete pending review by id
+    app.delete('/pendingReview/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await pendingReviewCollection.deleteOne(filter);
+      res.send(result);
+
+    })
+    
+    //get employee review given by manager
+    app.get('/employeeReviews/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      // console.log(email);
+      // console.log(req.decoded);
+      const decodedEmail = req.decoded.email;
+      // console.log('decoded', decodedEmail)
+      if (email === decodedEmail) {
+        const query = { email: email };
+        const cursor = employeeReviewCollection.find(query);
+        const reviews = await cursor.toArray();
+        return res.send(reviews);
+      }
+    })
+
+    app.post('/employeeReviews', async (req, res) => {
+      const review = req.body;
+      const result = await employeeReviewCollection.insertOne(review);
+      res.send(result);
+    })
     //Add Employee
     app.post('/employee', async (req, res) => {
-      const doctor = req.body;
-      const result = await employeeCollection.insertOne(doctor);
+      const employee = req.body;
+      const result = await employeeCollection.insertOne(employee);
       res.send(result);
     })
 
