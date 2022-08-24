@@ -55,6 +55,7 @@ async function run() {
     const employeeCollection = database.collection('employee');
     const employeeReviewCollection = database.collection('userReview');
     const feedbackCollection = database.collection('feedbacks');
+    const leaderBoardCollection = database.collection('leaderboard');
 
     const verifyManager = async (req, res, next) => {
       const requester = req.decoded.email;
@@ -108,6 +109,27 @@ async function run() {
       const result = await customerReviews.insertOne(item)
       res.json(result)
     })
+
+    //  //get employee
+    //  app.get('/employee', async (req, res) => {
+    //   // const query = { role: user.role !== 'Manager' };
+
+    //   //   const options = {
+    //   // // sort returned documents in ascending order by title (A->Z)
+    //   // sort: { title: 1 },
+    //   // // Include only the `title` and `imdb` fields in each returned document
+    //   // projection: { _id: 0, title: 1, imdb: 1 },
+    // // };
+    // const query = {role: 'Man'}
+    //       const cursor = userCollection.find(query);
+    //       const result = await cursor.toArray();
+    //       return res.send(result);
+
+
+
+    // const isManager = user.role === 'Manager';
+    // res.send({ manager: isManager });
+    // })
 
     //get all Users
     app.get("/user", async (req, res) => {
@@ -300,7 +322,7 @@ async function run() {
       res.send(result);
 
     })
-    
+
     //get employee review given by manager
     app.get('/employeeReviews/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -329,13 +351,13 @@ async function run() {
     })
 
     //get employee review
-    app.get('/employeeReview', verifyJWT, async (req, res) => {
+    app.get('/employeeReviews', async (req, res) => {
       const reviews = await employeeReviewCollection.find().toArray();
       res.send(reviews);
     })
 
     //post task
-    app.post('/employeeReview', async (req, res) => {
+    app.post('/employeeReviews', async (req, res) => {
       const review = req.body;
       const result = await employeeReviewCollection.insertOne(review);
       res.send(result);
@@ -381,7 +403,26 @@ async function run() {
       res.send(result);
 
     })
+     //get leaderboard
+     app.get('/leaderboard', async (req, res) => {
+      const leaderboard = await leaderBoardCollection.find().toArray();
+      res.send(leaderboard);
+    })
 
+
+    //Update leaderboard
+    app.put('/leaderboard/:email', async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updatedLeaderboard = req.body;
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: updatedLeaderboard,
+      };
+      const result = await leaderBoardCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
+
+    })
   }
   finally { }
 
