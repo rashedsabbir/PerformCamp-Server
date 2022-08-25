@@ -186,13 +186,18 @@ async function run() {
       res.send(result);
 
     })
-    //get tasks
-    app.get("/task", async (req, res) => {
-      const q = req.query;
-      const cursor = taskCollection.find(q);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    //get tasks by manager email
+   app.get('/managerTask/:email', verifyJWT, async (req, res) => {
+    const appointee = req.params.email;
+    const decodedEmail = req.decoded.email;
+    if (appointee === decodedEmail) {
+      const query = { appointee: appointee };
+      const cursor = taskCollection.find(query);
+      const tasks = await cursor.toArray();
+      return res.send(tasks);
+    }
+  })
+
     //Get task by assign email
     app.get('/task/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -209,11 +214,6 @@ async function run() {
       }
     })
 
-    //get order
-    app.get('/order', verifyJWT, async (req, res) => {
-      const orders = await orderCollection.find().toArray();
-      res.send(orders);
-    })
 
     //post task
     app.post('/task', async (req, res) => {
